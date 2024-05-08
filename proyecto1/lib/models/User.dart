@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class User {
   final int id;
   final String name;
@@ -24,15 +22,25 @@ class User {
       final profile = json['profile'];
       return User(
         id: profile['id'] as int,
-        name: profile['name'] as String,
+        name: profile['name'] ?? '',
         surname: profile['surname'] as String,
         email: profile['email'] as String,
         phone: profile['phone'] as String,
         image: profile['image'] as String,
         password: '',
       );
+    } else if (json.containsKey('id')) {
+      return User(
+        id: json['id'] = 0,
+        name: json['name'] ?? '' ,
+        surname: json['surname'] ?? '',
+        email: json['email'] ?? '',
+        phone: json['phone'] ?? '',
+        image: json['image']?? '',
+        password: '',
+      );
     } else {
-      throw FormatException('Token not found in response');
+      throw FormatException('Token or user id not found in response');
     }
   }
 }

@@ -1,62 +1,191 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:proyecto1/routes/api.dart';
-import 'package:proyecto1/models/User.dart';
+import 'package:http/http.dart' as http;
+import 'package:proyecto1/LodgingPageid.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:proyecto1/models/Reservation.dart';
 
-class MyPerfilPage extends StatefulWidget {
-    final int id;
-  const MyPerfilPage({Key? key, required this.title, required this.id})
-      : super(key: key);
-
-  final String title;
+class ProfilePage extends StatefulWidget {
+  const ProfilePage({Key? key}) : super(key: key);
 
   @override
-  State<MyPerfilPage> createState() => _MyPerfilPageState();
+  _ProfilePageState createState() => _ProfilePageState();
 }
 
-class _MyPerfilPageState extends State<MyPerfilPage> {
- late Future<User> futureUser;
-
+class _ProfilePageState extends State<ProfilePage> {
+  Map<String, dynamic>? userData;
+  List<Reservation>? reservations;
+  String? token;
   @override
   void initState() {
     super.initState();
-    futureUser = fetchUser(widget.id);
+    _loadUserData();
   }
+
+  Future<void> _loadUserData() async {
+    token = await getToken();
+
+    final String url = 'https://amavizca.terrabyteco.com/api/profile';
+    final Map<String, String> headers = {
+      "Content-type": "application/json",
+      "Authorization": "Bearer $token",
+    };
+
+    try {
+      final http.Response response =
+          await http.get(Uri.parse(url), headers: headers);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        setState(() {
+          userData = responseData['profile'];
+          List<dynamic>? reservationsData = userData!['reservations'];
+          if (reservationsData != null) {
+            reservations = reservationsData.map((reservationData) {
+              return Reservation.fromJson(reservationData);
+            }).toList();
+          }
+        });
+      } else {
+        print('Error al cargar los datos del usuario: ${response.body}');
+      }
+    } catch (e) {
+      print('Error de conexión: $e');
+    }
+  }
+
+  Future<String?> getToken() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token') ?? '';
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          title: Text(widget.title),
-        ),
-       body: Center(
-          child: FutureBuilder<User>(
-            future: futureUser,
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                return Column(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      child: Column(children: [
-                        Image.network(snapshot.data!.image,
-                            width: 100, height: 100),
-                        Text(snapshot.data!.name),
-                        Text(snapshot.data!.surname),
-                        Text(snapshot.data!.email),
-                        Text(snapshot.data!.phone)
-                      ]),
-                    )
-                  ],
-                );
-              } else if (snapshot.hasError) {
-                return Text('${snapshot.error}');
-              }
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: const Text('Perfil de usuario'),
+      ),
+      body: Builder(
+        builder: (context) => Center(
+          child: userData != null
+              ? SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: <Widget>[
+                      Container(
+                        alignment: AlignmentDirectional.topStart,
+                        padding:
+                            const EdgeInsets.only(top: 5, left: 20, bottom: 5),
+                        child: Image.network(
+                          userData!['image'],
+                          width: 300,
+                          height: 300,
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                      Container(
+                        alignment: AlignmentDirectional.topStart,
+                        child: Column(
+                          children: [
+                            Container(
+                              alignment: AlignmentDirectional.topStart,
+                              padding: const EdgeInsets.only(
+                                  top: 5, left: 20, bottom: 5),
+                              child: Text(
+                                'Nombre: ${userData!['name']}',
+                                style: const TextStyle(fontSize: 20),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                            Container(
+                              alignment: AlignmentDirectional.topStart,
+                              padding: const EdgeInsets.only(
+                                  top: 5, left: 20, bottom: 5),
+                              child: Text(
+                                'SurName: ${userData!['surname']}',
+                                style: const TextStyle(fontSize: 20),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                            Container(
+                              alignment: AlignmentDirectional.topStart,
+                              padding: const EdgeInsets.only(
+                                  top: 5, left: 20, bottom: 5),
+                              child: Text(
+                                'Email: ${userData!['email']}',
+                                style: const TextStyle(fontSize: 20),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                            Container(
+                              alignment: AlignmentDirectional.topStart,
+                              padding: const EdgeInsets.only(
+                                  top: 5, left: 20, bottom: 5),
+                              child: Text(
+                                'Phone: ${userData!['phone']}',
+                                style: const TextStyle(fontSize: 20),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                            Container(
+                              alignment: AlignmentDirectional.topStart,
+                              padding: const EdgeInsets.only(
+                                  top: 5, left: 20, bottom: 5),
+                              child: Text(
+                                'Token: $token',
+                                style: const TextStyle(fontSize: 10),
+                                textAlign: TextAlign.left,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (reservations != null)
+                        ...reservations!.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final reservation = entry.value;
 
-              // By default, show a loading spinner.
-              return const CircularProgressIndicator();
-            },
-          ),
-        ));
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => MyLodgingPageId(
+                                    id: reservation.lodgingId,
+                                    title: '',
+                                  ), // Pasa el lodgingId al constructor
+                                ),
+                              );
+                            },
+                            child: Container(
+                              color: Color.fromARGB(224, 243, 227, 192),
+                              child: Column(
+                                children: [
+                                  ListTile(
+                                    title: Text(
+                                        'Nombre Hotel: ${reservation.name}'),
+                                    subtitle: Text(
+                                        'Fecha inicio: ${reservation.startDate}'),
+                                  ),
+                                  if (index != reservations!.length - 1)
+                                    Container(
+                                      height: 1,
+                                      color: Colors.grey.withOpacity(0.5),
+                                      margin:
+                                          EdgeInsets.symmetric(horizontal: 16),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
+                )
+              : const CircularProgressIndicator(),
+        ),
+      ),
+    );
   }
 }

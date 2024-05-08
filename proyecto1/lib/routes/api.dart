@@ -1,66 +1,76 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:proyecto1/models/Lodging.dart';
 import 'package:proyecto1/models/User.dart';
+import 'package:proyecto1/models/Comment.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<List<Lodging>> fetchLodgings() async {
-  final response =
-      await http.get(Uri.parse('http://127.0.0.1:8000/api/lodgings'));
+  final response = await http
+      .get(Uri.parse('https://amavizca.terrabyteco.com/api/lodgings'));
 
   if (response.statusCode == 200) {
-    // If the server did return a 200 OK response,
-    // then parse the JSON.
     List<dynamic> jsonList = jsonDecode(response.body);
     List<Lodging> lodgings =
         jsonList.map((lodgingJson) => Lodging.fromJson(lodgingJson)).toList();
     return lodgings;
   } else {
-    // If the server did not return a 200 OK response,
-    // then throw an exception.
     throw Exception('Failed to load lodgings');
   }
 }
 
-Future<Lodging> fetchLodging(int id) async {
-  final response = await http
-      .get(Uri.parse('http://127.0.0.1:8000/api/lodgings/$id'));
-
-  if (response.statusCode == 200) {
-    // If the server did return a 200 OK response,
-    // then parse the JSON.
-    return Lodging.fromJson(jsonDecode(response.body) as Map<String,dynamic>);
-  } else {
-    // If the server did not return a 200 OK response,
-    // then throw an exception.
-    throw Exception('Failed to load lodging');
-  }
-
+Future<String?> getToken() async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  return prefs.getString('token');
 }
 
-Future<User> fetchLogin(String name, String email, String password) async {
-  final response = await http.post(
-    Uri.parse('http://127.0.0.1:8000/api/login'),
-    body: {
-      'email': email,
-      'password': password,
+Future<List<Comment>> fetchCommentsByLodging(int id) async {
+  final String? token = await getToken();
+
+  if (token == null) {
+    throw Exception('No se pudo obtener el token de autorización');
+  }
+
+  final response = await http.get(
+    Uri.parse('https://amavizca.terrabyteco.com/api/lodgings/$id/comments'),
+    headers: {
+      'Authorization': 'Bearer $token',
     },
   );
 
-  print('Response body: ${response.body}');
-
   if (response.statusCode == 200) {
-    final responseData = jsonDecode(response.body);
-    if (responseData.containsKey('token')) {
-      return User.fromJson(responseData['perfil'] as Map<String, dynamic>);
-    } else {
-      throw Exception('Token not found in response');
-    }
+    List<dynamic> jsonData = jsonDecode(response.body);
+    return jsonData
+        .map((commentJson) => Comment.fromJson(commentJson))
+        .toList();
   } else {
-    throw Exception('Failed to load user: ${response.statusCode}');
+    throw Exception('Failed to load comments');
   }
 }
 
 
 
+Future<Lodging> fetchLodging(int id) async {
+  final response = await http
+      .get(Uri.parse('https://amavizca.terrabyteco.com/api/lodgings/$id'));
+  if (response.statusCode == 200) {
+    return Lodging.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  } else {
+    throw Exception('Failed to load lodging');
+  }
+}
 
+Future<User> fetchUserData() async {
+  try {
+    final response = await http
+        .get(Uri.parse('https://amavizca.terrabyteco.com/api/profile'));
+
+    if (response.statusCode == 200) {
+      return User.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    } else {
+      throw Exception('Failed to load user data: ${response.statusCode}');
+    }
+  } catch (e) {
+    throw Exception('Failed to load user data: $e');
+  }
+}

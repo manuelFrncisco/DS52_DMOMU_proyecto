@@ -1,61 +1,113 @@
 import 'package:flutter/material.dart';
-import 'package:proyecto1/models/User.dart';
-import 'package:proyecto1/routes/api.dart';
+import 'package:http/http.dart' as http;
+import 'package:proyecto1/MyHomePage.dart';
+import 'dart:convert';
 
-class RegisterPage extends StatefulWidget {
+
+class Register extends StatefulWidget {
   @override
-  _RegisterPageState createState() => _RegisterPageState();
+  _RegisterState createState() => _RegisterState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
-  final TextEditingController nameController = TextEditingController();
+class _RegisterState extends State<Register> {
+  final TextEditingController namelController = TextEditingController();
+  final TextEditingController surnameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-
-  Future<void> _register() async {
-    final String name = nameController.text;
-    final String email = emailController.text;
-    final String password = passwordController.text;
-
-    
-
-    // Enviar los datos del usuario a tu API para registrar
-    // Puedes usar http package o cualquier otro método para enviar la solicitud POST a tu API
-  }
+  final TextEditingController imageController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Registro'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(labelText: 'Nombre'),
-            ),
-            TextField(
-              controller: emailController,
-              decoration: InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: passwordController,
-              decoration: InputDecoration(labelText: 'Contraseña'),
-              obscureText: true,
-            ),
-            SizedBox(height: 20.0),
-            ElevatedButton(
-              onPressed: _register,
-              child: Text('Registrarse'),
-            ),
-          ],
+        body: ListView(
+      padding: const EdgeInsets.all(16),
+      children: <Widget>[
+        const SizedBox(height: 16),
+        const Text(
+          'Completa todo los campos.',
+          style: TextStyle(fontSize: 24),
         ),
-      ),
-    );
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: namelController,
+          decoration: const InputDecoration(
+            labelText: 'Nombre',
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: surnameController,
+          decoration: const InputDecoration(
+            labelText: 'Apellido',
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: emailController,
+          decoration: const InputDecoration(
+            labelText: 'Correo',
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: phoneController,
+          decoration: const InputDecoration(
+            labelText: 'Telefono',
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: passwordController,
+          decoration: const InputDecoration(
+            labelText: 'Contraseña',
+          ),
+        ),
+        TextFormField(
+          controller: imageController,
+          decoration: const InputDecoration(
+            labelText: 'Imagen',
+          ),
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: () async {
+            final String url = 'https://amavizca.terrabyteco.com/api/register';
+            final Map<String, dynamic> body = {
+              'name': namelController.text,
+              'surname': surnameController.text,
+              'email': emailController.text,
+              'phone': phoneController.text,
+              'password': passwordController.text,
+              'image': imageController.text,
+            };
+
+            try {
+              final http.Response response = await http.post(
+                Uri.parse(url),
+                headers: {"Content-type": "application/json"},
+                body: json.encode(body),
+              );
+              if (response.statusCode == 200) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LoginPage(title: 'Registro exitoso!'),
+                  ),
+                );
+              } else {
+                // Si la solicitud falló, puedes mostrar un mensaje de error
+                print('Error: ${response.body}');
+              }
+            } catch (e) {
+              print('Error: $e');
+            }
+          },
+          child: const Text('Registrarse'),
+        ),
+      ],
+    ));
   }
+
+  
 }
